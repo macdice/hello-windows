@@ -33,6 +33,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 */
+CloseHandle(file);
 CloseHandle(file2);
 
 	printf("Renaming foo.txt to bar.txt...\n");
