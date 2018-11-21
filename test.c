@@ -27,7 +27,7 @@ main(int argc, char *argv[])
 
 
 	printf("Renaming foo.txt to bar.txt...\n");
-	if (unlink("foo.txt", "bar.txt") != 0)
+	if (rename("foo.txt", "bar.txt") != 0)
 	{
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
