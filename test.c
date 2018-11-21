@@ -45,16 +45,16 @@ CloseHandle(file2);
 	}
 
 	/* this does work */
-	const char *new_name = "bar.txt";
-	size_t size = strlen(new_name);
-	FILE_RENAME_INFO *rename_info = malloc(sizeof(FILE_RENAME_INFO) + size);
+	const wchar_t *new_name = L"bar.txt";
+	size_t len = wcslen(new_name);
+	FILE_RENAME_INFO *rename_info = malloc(sizeof(FILE_RENAME_INFO) + len * sizeof(wchar_t));
 	rename_info->Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS;
-	rename_info->ReplaceIfExists = true;
+	rename_info->ReplaceIfExists = TRUE;
 	rename_info->RootDirectory = NULL;
-	rename_info->FileNameLength = size;
-	strcpy(rename_info->FileName, new_name);
+	rename_info->FileNameLength = len;
+	wmemcpy(rename_info->FileName, new_name, len);
 	printf("Performing mysterious SetFileInformationByHandle operation...\n");
-	if (SetFileInformationByHandle(file, FileRenameInfoEx, &rename_info, sizeof(FILE_RENAME_INFO) + size))
+	if (SetFileInformationByHandle(file, FileRenameInfoEx, &rename_info, sizeof(FILE_RENAME_INFO) + len * sizeof(wchar_t)))
 	{
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
