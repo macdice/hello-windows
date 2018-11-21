@@ -24,7 +24,13 @@ main(int argc, char *argv[])
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
 	}
-	CloseHandle(file2);
+
+	printf("Unlinking bar.txt...\n");
+	if (unlink("bar.txt") != 0)
+	{
+		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
+		exit(1);
+	}
 
 
 	printf("Renaming foo.txt to bar.txt...\n");
