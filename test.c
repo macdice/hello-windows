@@ -36,6 +36,7 @@ CloseHandle(file);
 CloseHandle(file2);
 */
 
+#if 0
 	/* this doesn't work */
 	printf("Renaming foo.txt to bar.txt...\n");
 	if (rename("foo.txt", "bar.txt") != 0)
@@ -43,6 +44,7 @@ CloseHandle(file2);
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
 	}
+#endif
 
 	/* this does work */
 	const wchar_t *new_name = L"bar.txt";
