@@ -16,10 +16,10 @@ main(int argc, char *argv[])
 	}
 
 	printf("Creating file bar.txt...\n");
-	HANDLE file = CreateFile("foo.txt", GENERIC_WRITE,
+	HANDLE file2 = CreateFile("foo.txt", GENERIC_WRITE,
 							 FILE_SHARE_DELETE, NULL,
 							 CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (file == INVALID_HANDLE_VALUE)
+	if (file2 == INVALID_HANDLE_VALUE)
 	{
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
