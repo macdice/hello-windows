@@ -25,13 +25,15 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
+/*
 	printf("Unlinking bar.txt...\n");
 	if (unlink("bar.txt") != 0)
 	{
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
 	}
-//CloseHandle(file2);
+*/
+CloseHandle(file2);
 
 	printf("Renaming foo.txt to bar.txt...\n");
 	if (rename("foo.txt", "bar.txt") != 0)
