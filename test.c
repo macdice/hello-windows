@@ -25,16 +25,16 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-/*
+#if 0
 	printf("Unlinking bar.txt...\n");
 	if (unlink("bar.txt") != 0)
 	{
 		printf("Failed, error = %d, errno = %d (%s).\n", GetLastError(), errno, strerror(errno));
 		exit(1);
 	}
-CloseHandle(file);
-CloseHandle(file2);
-*/
+	CloseHandle(file);
+	CloseHandle(file2);
+#endif
 
 #if 0
 	/* this doesn't work */
