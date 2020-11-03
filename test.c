@@ -11,7 +11,8 @@ main(int argc, char *argv[])
 	size_t converted_size;
 
 	mbstowcs_s(&converted_size, wide_collcollate, LOCALE_NAME_MAX_LENGTH,
-			   "English_United States.1252", _TRUNCATE);
+			   "en-NZ", _TRUNCATE);
+			   //"English_United States.1252", _TRUNCATE);
 //	MultiByteToWideChar(CP_ACP, 0, collcollate, -1, wide_collcollate,
 //						LOCALE_NAME_MAX_LENGTH);
 	if (GetNLSVersionEx(COMPARE_STRING, wide_collcollate, &version))
