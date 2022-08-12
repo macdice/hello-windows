@@ -63,10 +63,7 @@ main(int argc, char *argv[])
 
 	doit(10);
 	doit(10);	/* verify that duplicate name fails */
-	doit(100);
-	for (int i = 240; i < 270; i++)
+	for (int i = 100; i < 110; i++)
 		doit(i);
-	doit(260);
-	doit(300);
 }
 
