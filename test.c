@@ -1,41 +1,71 @@
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
+#include <winsock2.h>
+#include <afunix.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <windows.h>
+#pragma comment(lib, "Ws2_32.lib")
 
 void
-doit(const char *collcollate)
+doit(size_t length)
 {
-	NLSVERSIONINFOEX version = {sizeof(NLSVERSIONINFOEX)};
-	WCHAR wide_collcollate[LOCALE_NAME_MAX_LENGTH];
-	size_t converted_size;
+	SOCKET sock;
+	struct sockaddr_un *addr;
+	size_t addr_size;
 
-	printf("%s", collcollate);
-	if (mbstowcs_s(&converted_size, wide_collcollate, LOCALE_NAME_MAX_LENGTH, collcollate, _TRUNCATE) != 0)
+	sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sock == INVALID_SOCKET)
 	{
-		printf(" (failed to convert to wchar)\n");
+		printf("socket() failed: %d\n", WSAGetLastError());
+		return;
 	}
-	else if (GetNLSVersionEx(COMPARE_STRING, wide_collcollate, &version))
+
+	addr_size = sizeof(addr->sun_family) + length + 3 + 1; /* "C:/" + NUL */
+	addr = malloc(addr_size);
+	memset(addr, 0, addr_size);
+	addr->sun_family = AF_UNIX;
+	memcpy(&addr->sun_path, "C:/", 3);
+	for (size_t i = 0; i < length; ++i)
+		addr->sun_path[i + 3] = 'x';
+
+	/* make the prefix distinct to find out if error 10048 is because name is chomped at 240...*/
+	//if (length > 10)
+//		sprintf(&addr->sun_path[4], "%zu", length);
+
+	printf("Can I make a socket with path length %zu? ", length); //addr->sun_path);
+
+	if (bind(sock, (struct sockaddr *) addr, 3 + length + sizeof(addr->sun_family)) == SOCKET_ERROR)
 	{
-		printf(" -> version %d.%d,%d.%d",
-			   (version.dwNLSVersion >> 8) & 0xFFFF,
-			   version.dwNLSVersion & 0xFF,
-			   (version.dwDefinedVersion >> 8) & 0xFFFF,
-			   version.dwDefinedVersion & 0xFF);
+		printf("bind() failed: %d\n", WSAGetLastError());
+		return;
 	}
-	else
-	{
-		printf(" -> error %d\n", GetLastError());
-	}
+	printf("yes!\n");
+	//unlink(addr->sun_path); // leave it behind in the file system
+	free(addr);
+	closesocket(sock);
 }
 
 int
 main(int argc, char *argv[])
 {
-	doit("English_United States");
-	doit("English_United States.1252");
-	doit("English_United States.UTF-8");
-	doit("en-US");
-	doit("en-US.1252");
-	doit("en-US.UTF-8");
+	WSADATA wsadata;
+	int rc;
+
+	rc = WSAStartup(MAKEWORD(2, 2), &wsadata);
+	if (rc != 0)
+	{
+		printf("WSAStartup failed: %d\n", rc);
+		return;
+	}
+
+	doit(10);
+	doit(10);	/* verify that duplicate name fails */
+	doit(100);
+	for (int i = 240; i < 270; i++)
+		doit(i);
+	doit(260);
+	doit(300);
 }
+
