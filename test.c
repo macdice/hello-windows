@@ -22,14 +22,14 @@ doit(size_t length)
 		return;
 	}
 
-	addr_size = sizeof(addr->sun_family) + length + 4 + 1; /* "C:/" + NUL */
+	addr_size = sizeof(addr->sun_family) + length + 3 + 1; /* "C:/" + NUL */
 	addr = malloc(addr_size);
 	memset(addr, 0, addr_size);
 	addr->sun_family = AF_UNIX;
-	//memcpy(&addr->sun_path, "C:/", 3);
-	memcpy(&addr->sun_path, "\000C:/", 4);
+	memcpy(&addr->sun_path, "C:/", 3);
+	//memcpy(&addr->sun_path, "\000C:/", 4);
 	for (size_t i = 0; i < length; ++i)
-		addr->sun_path[i + 4] = 'x';
+		addr->sun_path[i + 3] = 'x';
 
 	/* make the prefix distinct to find out if error 10048 is because name is chomped at 240...*/
 	//if (length > 10)
