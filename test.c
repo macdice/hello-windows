@@ -37,7 +37,7 @@ doit(size_t length)
 
 	printf("Can I make a socket with path length %zu? ", length); //addr->sun_path);
 
-	if (bind(sock, (struct sockaddr *) addr, 4 + length + sizeof(addr->sun_family)) == SOCKET_ERROR)
+	if (bind(sock, (struct sockaddr *) addr, 3 + length + sizeof(addr->sun_family)) == SOCKET_ERROR)
 	{
 		printf("bind() failed: %d\n", WSAGetLastError());
 		return;
