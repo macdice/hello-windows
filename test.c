@@ -26,10 +26,10 @@ doit(size_t length)
 	addr = malloc(addr_size);
 	memset(addr, 0, addr_size);
 	addr->sun_family = AF_UNIX;
-	memcpy(&addr->sun_path, "C:/", 3);
-	//memcpy(&addr->sun_path, "\000C:/", 4);
+	//memcpy(&addr->sun_path, "C:/", 3);
+	memcpy(&addr->sun_path, "\000C:/", 4);
 	for (size_t i = 0; i < length; ++i)
-		addr->sun_path[i + 3] = 'x';
+		addr->sun_path[i + 4] = 'x';
 
 	/* make the prefix distinct to find out if error 10048 is because name is chomped at 240...*/
 	//if (length > 10)
@@ -37,7 +37,7 @@ doit(size_t length)
 
 	printf("Can I make a socket with path length %zu? ", length); //addr->sun_path);
 
-	if (bind(sock, (struct sockaddr *) addr, 3 + length + sizeof(addr->sun_family)) == SOCKET_ERROR)
+	if (bind(sock, (struct sockaddr *) addr, 4 + length + sizeof(addr->sun_family)) == SOCKET_ERROR)
 	{
 		printf("bind() failed: %d\n", WSAGetLastError());
 		return;
@@ -45,7 +45,7 @@ doit(size_t length)
 	printf("yes!\n");
 	//unlink(addr->sun_path); // leave it behind in the file system
 	free(addr);
-	closesocket(sock);
+	//closesocket(sock);
 }
 
 int
