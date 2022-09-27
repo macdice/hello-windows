@@ -7,4 +7,6 @@ windows_task:
     - vcvarsall x86
     - cd C:/Users/ContainerAdministrator/AppData/Local/Temp/cirrus-ci-build
     - cl /EHsc test.c
+    - mklink /j my_junction c:/windows
+    - mklink /d my_symlink c:/windows
     - test.exe
