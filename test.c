@@ -7,6 +7,7 @@ doit(const char *name)
 {
 	char *full;
 
+	errno = 0;
 	full = _fullpath(NULL, name, 0);
 	if (full) {
 		printf("%s -> %s\n", name, full);
