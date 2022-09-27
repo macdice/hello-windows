@@ -40,8 +40,8 @@ main(int argc, char *argv[])
 
 	memset(&overlapped, 0, sizeof(overlapped));
 	overlapped.Offset = 0;
-	if (!ReadFile(handle, buffer, sizeof(buffer), NULL, &overlapped)) {
-		printf("WriteFile failed\n");
+	if (!ReadFile(handle, buffer, 12, NULL, &overlapped)) {
+		printf("ReadFile failed\n");
 		return EXIT_FAILURE;
 	}
 
