@@ -22,6 +22,9 @@ main(int argc, char *argv[])
 	doit("c:\\windows");
 	doit("c:\\does not exist.txt");
 	doit("e:\\bad drive.txt");
+	doit("../..");
+	doit("..\\..");
+	doit("c:\\.\\does not exists\\..\\windows");
 	return 0;
 }
 
