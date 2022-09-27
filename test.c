@@ -7,6 +7,7 @@ int
 main(int argc, char *argv[])
 {
 	DWORD written;
+	DWORD readen;
 	HANDLE handle;
 	OVERLAPPED overlapped;
 	char buffer[1024];
@@ -40,7 +41,7 @@ main(int argc, char *argv[])
 
 	memset(&overlapped, 0, sizeof(overlapped));
 	overlapped.Offset = 0;
-	if (!ReadFile(handle, buffer, 11, NULL, &overlapped)) {
+	if (!ReadFile(handle, buffer, 12, &readen, &overlapped)) {
 		printf("ReadFile failed: %d\n", (int) GetLastError());
 		return EXIT_FAILURE;
 	}
