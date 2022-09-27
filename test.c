@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!GetOverlappedResult(handle, &overlapped, &written, true)) {
+	if (!GetOverlappedResult(handle, &overlapped, &written, TRUE)) {
 		printf("GetOverlappedResult failed\n");
 		return EXIT_FAILURE;
 	}
