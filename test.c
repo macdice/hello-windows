@@ -29,7 +29,7 @@ main(int argc, char *argv[])
 
 	CloseHandle(handle);
 
-	handle = CreateFile("test.txt", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+	handle = CreateFile("test.txt", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
 	if (handle == INVALID_HANDLE_VALUE) {
 		printf("CreateFile failed\n");
 		return EXIT_FAILURE;
