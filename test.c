@@ -28,6 +28,9 @@ main(int argc, char *argv[])
 	doit("../../..");
 	doit("../../../..");
 	doit("../../../../..");
+	doit("../../../../../..");
+	doit("../../../../../../..");
+	doit("../../../../../../../..");
 	doit("..\\..");
 	doit("c:\\.\\does not exists\\..\\windows");
 	return 0;
