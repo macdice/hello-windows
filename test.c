@@ -42,16 +42,26 @@ main(int argc, char *argv[])
 	doit("../../../../../../../..");
 	doit("..\\..");
 	doit("c:\\.\\does not exists\\..\\windows");
-	doit("my_junction");
-	doit("my_junction/.");
-	doit("my_junction/..");
-	doit("my_junction/../my_junction");
-	doit("my_junction/system32");
-	doit("my_symlink");
-	doit("my_symlink/.");
-	doit("my_symlink/..");
-	doit("my_symlink/../my_symlink");
-	doit("my_symlink/system32");
+	doit("good_junction");
+	doit("good_junction/.");
+	doit("good_junction/..");
+	doit("good_junction/../my_junction");
+	doit("good_junction/system32");
+	doit("good_symlink");
+	doit("good_symlink/.");
+	doit("good_symlink/..");
+	doit("good_symlink/../my_symlink");
+	doit("good_symlink/system32");
+	doit("bad_junction");
+	doit("bad_junction/.");
+	doit("bad_junction/..");
+	doit("bad_junction/../my_junction");
+	doit("bad_junction/system32");
+	doit("bad_symlink");
+	doit("bad_symlink/.");
+	doit("bad_symlink/..");
+	doit("bad_symlink/../my_symlink");
+	doit("bad_symlink/system32");
 	return 0;
 }
 
