@@ -4,10 +4,8 @@
 int
 main(int argc, char *argv[])
 {
-	char *x = fullpath(NULL, "c:\\does not exists.txt", 0);
-
-	if (!x) {
-		perror("_fullpath");
+	if (!fullpath(NULL, "c:\\does not exists.txt", 0))
+		printf("errno = %d, %s\n", errno, strerror(errno));
 
 	return 0;
 }
