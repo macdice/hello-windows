@@ -39,7 +39,7 @@ main(int argc, char *argv[])
 
 	memset(&overlapped, 0, sizeof(overlapped));
 	overlapped.Offset = 0;
-	if (!WriteFile(handle, "hello world\n", 12, NULL, &overlapped)) {
+	if (!WriteFile(handle, "hello world\n", 12, NULL, &overlapped) && GetLastError() != ERROR_IO_PENDING) {
 		printf("WriteFile failed\n");
 		return EXIT_FAILURE;
 	}
