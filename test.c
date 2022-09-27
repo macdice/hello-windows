@@ -26,6 +26,8 @@ main(int argc, char *argv[])
 	doit("x:bad drive.txt");
 	doit("1:\\very bad drive.txt");
 	doit("1:very bad drive.txt");
+	doit("cc:\\impossible drive.txt");
+	doit("cc:impossible drive.txt");
 	doit("a:remember floppy drives?.txt");
 	doit("test.c");
 	doit("test.c/foo");
