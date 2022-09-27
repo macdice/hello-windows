@@ -2,12 +2,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void
+doit(const char *name)
+{
+	char *full;
+
+	full = _fullpath(NULL, name, 0);
+	if (full) {
+		printf("%s -> %s\n", name, full);
+		free(full);
+	}
+	else
+		printf("%s -> NULL, errno = %d, %s\n", name, errno, strerror(errno));
+}
+
 int
 main(int argc, char *argv[])
 {
-	if (!_fullpath(NULL, "c:\\does not exists.txt", 0))
-		printf("errno = %d, %s\n", errno, strerror(errno));
-
+	doit("c:\\windows");
+	doit("c:\\does not exist.txt");
 	return 0;
 }
 
