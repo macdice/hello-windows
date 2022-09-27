@@ -7,7 +7,6 @@ int
 main(int argc, char *argv[])
 {
 	DWORD written;
-	DWORD readen;
 	HANDLE handle;
 	OVERLAPPED overlapped;
 	char buffer[1024];
@@ -31,7 +30,7 @@ main(int argc, char *argv[])
 
 	CloseHandle(handle);
 
-	handle = CreateFile("test.txt", GENERIC_WRITE | GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	handle = CreateFile("test.txt", GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE) {
 		printf("CreateFile failed\n");
 		return EXIT_FAILURE;
@@ -41,7 +40,7 @@ main(int argc, char *argv[])
 
 	memset(&overlapped, 0, sizeof(overlapped));
 	overlapped.Offset = 0;
-	if (!ReadFile(handle, buffer, 12, &readen, &overlapped)) {
+	if (!ReadFile(handle, buffer, 12, NULL, &overlapped)) {
 		printf("ReadFile failed: %d\n", (int) GetLastError());
 		return EXIT_FAILURE;
 	}
