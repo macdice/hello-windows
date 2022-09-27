@@ -51,6 +51,13 @@ main(int argc, char *argv[])
 
 	printf("after pointer %d\n", SetFilePointer(handle, 0, NULL, FILE_CURRENT));
 
+	if (!WriteFile(handle, "hello world\n", 12, NULL, NULL)) {
+		printf("WriteFile failed\n");
+		return EXIT_FAILURE;
+	}
+
+	printf("after pointer %d\n", SetFilePointer(handle, 0, NULL, FILE_CURRENT));
+
 	return EXIT_SUCCESS;
 }
 
