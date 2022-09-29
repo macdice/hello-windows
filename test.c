@@ -11,7 +11,7 @@ main(int argc, char *argv[])
 	OVERLAPPED overlapped;
 	char buffer[1024];
 
-	handle = CreateFile("test.txt", GENERIC_WRITE | GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	handle = CreateFile("test.txt", GENERIC_WRITE | GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_POSIX_SEMANTICS, NULL);
 	if (handle == INVALID_HANDLE_VALUE) {
 		printf("CreateFile failed\n");
 		return EXIT_FAILURE;
