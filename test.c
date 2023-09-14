@@ -1,11 +1,9 @@
 // modified https://social.msdn.microsoft.com/Forums/en-US/18769abd-fca0-4d3c-9884-1a38ce27ae90/wsapoll-and-nonblocking-connects-to-nonexistent-ports?forum=wsk
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
 
 #ifdef _WIN32
-#include <WinSock2.h>
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 typedef SOCKET sock_t;
@@ -26,6 +24,10 @@ typedef SOCKET sock_t;
 #define SOCKERR errno
 typedef int sock_t;
 #endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
 
 #define ASSERT(x) \
     do \
