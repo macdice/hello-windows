@@ -6,6 +6,7 @@
 
 #ifdef _WIN32
 #include <WinSock2.h>
+#include <ws2def.h>
 #include <ws2ipdef.h>
 typedef SOCKET sock_t;
 #define SOCKERR GetLastError()
