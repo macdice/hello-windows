@@ -2,9 +2,8 @@
 
 
 #ifdef _WIN32
-#include <winsock.h>
-#include <winsock2.h>
 #include <windows.h>
+#include <winsock2.h>
 typedef SOCKET sock_t;
 #define SOCKERR GetLastError()
 #define sockpoll WSAPoll
