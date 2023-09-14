@@ -2,9 +2,7 @@
 
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <winsock.h>
 #include <windows.h>
 typedef SOCKET sock_t;
 #define SOCKERR GetLastError()
