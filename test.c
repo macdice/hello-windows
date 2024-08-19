@@ -1,8 +1,17 @@
-#include <assert.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdio.h>
 #include <windows.h>
+
+static void
+myassert(int condition)
+{
+	if (!condition)
+	{
+		fprintf(stderr, "XXX assertion failed! decimal_point=[%s]\n", localeconv()->decimal_point);
+		exit(1);
+	}
+}
 
 DWORD WINAPI f(LPVOID p)
 {
@@ -34,9 +43,9 @@ DWORD WINAPI f(LPVOID p)
 	for (int i = 0; i < 1000000; ++i)
 	{
 		setlocale(LC_ALL, "fr-FR");
-		assert(strcmp(localeconv()->decimal_point, ",") == 0);
+		myassert(strcmp(localeconv()->decimal_point, ",") == 0);
 		setlocale(LC_ALL, "en-GB");
-		assert(strcmp(localeconv()->decimal_point, ".") == 0);
+		myassert(strcmp(localeconv()->decimal_point, ".") == 0);
 	}
 
 	fprintf(stderr, "thread %d: done\n",
