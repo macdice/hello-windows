@@ -6,29 +6,29 @@
 
 DWORD WINAPI f(LPVOID p)
 {
-	printf("thread %d: default localeconv() = %p\n",
+	fprintf(stderr, "thread %d: default localeconv() = %p\n",
 		(int) GetCurrentThreadId(),
 		localeconv());
 
 	setlocale(LC_ALL, "es-ES");
 
-	printf("thread %d: es-ES localeconv() = %p\n",
+	fprintf(stderr, "thread %d: es-ES localeconv() = %p\n",
 		(int) GetCurrentThreadId(),
 		localeconv());
 
 	_configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
 
-	printf("thread %d: es-ES localeconv() in thread-local mode = %p\n",
+	fprintf(stderr, "thread %d: es-ES localeconv() in thread-local mode = %p\n",
 		(int) GetCurrentThreadId(),
 		localeconv());
 
 	setlocale(LC_ALL, "de-DE");
 
-	printf("thread %d: de-DE localeconv() in thread-local mode = %p\n",
+	fprintf(stderr, "thread %d: de-DE localeconv() in thread-local mode = %p\n",
 		(int) GetCurrentThreadId(),
 		localeconv());
 
-	printf("thread %d: starting torture test...\n",
+	fprintf(stderr, "thread %d: starting torture test...\n",
 		(int) GetCurrentThreadId());
 
 	for (int i = 0; i < 1000000; ++i)
@@ -39,7 +39,8 @@ DWORD WINAPI f(LPVOID p)
 		assert(strcmp(localeconv()->decimal_point, ".") == 0);
 	}
 
-	printf("thread %d: done\n");
+	fprintf(stderr, "thread %d: done\n",
+		(int) GetCurrentThreadId());
 
 	return 0;
 }
