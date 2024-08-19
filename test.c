@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdio.h>
@@ -21,7 +22,6 @@ DWORD WINAPI f(LPVOID p)
 int
 main(int argc, char *argv[])
 {
-
 	HANDLE threads[NTHREADS];
 	DWORD thread_ids[NTHREADS];
 	
