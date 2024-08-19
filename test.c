@@ -59,6 +59,8 @@ main(int argc, char *argv[])
 	
 	_set_error_mode(_OUT_TO_STDERR);
 
+	assert(0);
+
 	for (int i = 0; i < NTHREADS; ++i)
 		threads[i] = CreateThread(NULL, 0, f, NULL, 0, &thread_ids[i]);
 	
