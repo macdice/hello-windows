@@ -33,6 +33,10 @@ DWORD WINAPI f(LPVOID p)
 
 	for (int i = 0; i < 10000; ++i)
 	{
+		if (i % 100 == 0)
+			fprintf(stderr, "thread %d: %d\n",
+				(int) GetCurrentThreadId(), i);
+
 		setlocale(LC_ALL, "fr-FR");
 		assert(strcmp(localeconv()->decimal_point, ",") == 0);
 		setlocale(LC_ALL, "en-GB");
