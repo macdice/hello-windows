@@ -16,7 +16,7 @@ main(int argc, char *argv[])
 	
 	threads[0] = CreateThread(NULL, 0, f, NULL, 0, &thread_ids[0]);
 	threads[1] = CreateThread(NULL, 0, f, NULL, 0, &thread_ids[1]);
-	WaitForMultipleObjects(2, threads, true, INIFINITE);
+	WaitForMultipleObjects(2, threads, TRUE, INFINITE);
 	CLoseHandle(threads[0]);
 	CLoseHandle(threads[1]);
 	return EXIT_SUCCESS;
