@@ -6,5 +6,5 @@ windows_task:
     - cd "c:/Program Files (x86)/Microsoft Visual Studio 14.0/VC"
     - vcvarsall x86
     - cd C:/Users/ContainerAdministrator/AppData/Local/Temp/cirrus-ci-build
-    - cl /EHsc test.c
+    - cl /EHsc test.c pg_threads.c
     - test.exe

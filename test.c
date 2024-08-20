@@ -1,18 +1,27 @@
-#include <stdio.h>
-#include <ws2tcpip.h>
+#include "c.h"
+#include "port/pg_threads.h"
 
-#define F(x) printf(#x " = \"%s\"\n", gai_strerror(x))
+#include <stdio.h>
+
+int
+my_thread_body(void *arg)
+{
+	return 42;
+}
 
 int main()
 {
-	F(EAI_AGAIN);
-	F(EAI_BADFLAGS);
-	F(EAI_FAIL);
-	F(EAI_FAMILY);
-	F(EAI_MEMORY);
-	F(EAI_NONAME);
-	F(EAI_SERVICE);
-	F(EAI_SOCKTYPE);
-	F(42);
-    return 0;
+	pg_thrd_t thread;
+	int result;
+
+	if (pg_thrd_create(&thread, my_thread_body, NULL) != pg_thrd_success)
+	{
+		perror("error creating thread\n");
+		return 1;
+	}
+
+	pg_thrd_join(thread, &result);
+	printf("thread return %d\n", result);
+
+	return 0;
 }
