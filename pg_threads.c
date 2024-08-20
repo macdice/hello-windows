@@ -18,7 +18,7 @@ typedef struct pg_thrd_thunk
 } pg_thrd_thunk;
 
 #ifdef WIN32
-BOOL
+BOOL CALLBACK
 pg_call_once_trampoline(pg_once_flag *flag, void *parameter, void **context)
 {
 	pg_call_once_function_t function = (pg_call_once_function_t) parameter;

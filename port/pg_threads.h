@@ -96,7 +96,7 @@ pg_thrd_maperror(int error)
 }
 
 #ifdef WIN32
-BOOL		pg_call_once_trampoline(pg_once_flag *flag, void *parameter, void **context);
+extern BOOL CALLBACK pg_call_once_trampoline(pg_once_flag *flag, void *parameter, void **context);
 #endif
 
 static inline void
