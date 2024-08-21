@@ -257,13 +257,17 @@ pg_tss_run_destructors(void *data)
       
       for (size_t slot = 0; slot < dtor_table_count; ++slot)
 	{
-	  void *value = pg_tss_get(dtor_table[slot].tss_id);
+		pg_tss_t tss_id = dtor_table[slot].tss_id;
+	  void *value = pg_tss_get(tss_id);
 
 	  if (value)
 	    {
 			pg_tss_dtor_t function = dtor_table[slot].function;
 
 			Assert(function);
+
+			/* Clear value. */
+			pg_tss_set(tss_id, NULL);
 
 	      /*
 	       * We'll need to go around again to make sure that a
