@@ -267,7 +267,7 @@ pg_rwlock_rdlock(pg_rwlock_t *lock)
 static inline int
 pg_rwlock_wrlock(pg_rwlock_t *lock)
 {
-#ifdef PG_THEADS_WIN32
+#ifdef PG_THREADS_WIN32
 	AcquireSRWLockExclusive(lock);
 	return pg_thrd_success;
 #else
