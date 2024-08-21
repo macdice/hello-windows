@@ -195,7 +195,7 @@ pg_tss_dtor_set(pg_tss_t tss_id, pg_tss_dtor_t destructor)
       size_t new_dtor_table_capacity;
 
       new_dtor_table_capacity = Min(1, dtor_table_capacity * 2);
-      new_dtor_table = malloc(sizeof(struct dtor_table_entry) * new_dtor_table_capacity);
+      new_dtor_table = malloc(sizeof(dtor_table[0]) * new_dtor_table_capacity);
       if (new_dtor_table == NULL)
 	{
 	  /* Out of memory. */
@@ -313,16 +313,15 @@ pg_tss_install_run_destructors(void)
 }
 
 /*
- * Every time pg_tss_set() installs a non-NULL value, it has to be sure that
- * destructors will run when this thread exits.  It does that by checking if the 
+ * Called every time pg_tss_set() installs a non-NULL value.
  */
 void
-pg_tss_ensure_destructors_will_run(void)
+pg_tss_ensure_destructors_in_this_thread(void)
 {
 	/*
 	 * Pairs with pg_tss_install_run_destructors(), called by pg_tss_create().
 	 * This makes sure that we know if the tss_id being set could possibly have
-	 * a destructor.  Wwe don't want to pay the cost of checking, but we can
+	 * a destructor.  We don't want to pay the cost of checking, but we can
 	 * check with a simple load if *any* tss_id has a destructor.  If so, we
 	 * make sure that pg_tss_destructor_hook has a non-NULL value in *this*
 	 * thread, because both Windows and POSIX will only call a destructor for a

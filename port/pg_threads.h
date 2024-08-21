@@ -25,12 +25,11 @@
 
 #ifdef WIN32
 /*
- * We use the macro PG_THREADS_WIN32 rather than WIN32 directly, to
- * keep a clear distinction between the Windows native APIs and the
- * true C11 APIs available in Visual Studio 2022, which may become an
- * option later.  The Windows native APIs need an in-house
- * implementation of TSS destructors, which we also gate separately so
- * that it can be tested on other OSes too.
+ * We use the macro PG_THREADS_WIN32 rather than WIN32 directly, because we
+ * might want to use the C11 APIs in Visual Studio 2022+ at some point.
+ * While using Windows native APIs, need an in-house implementation of TSS
+ * destructors, which we also gate separately so that it can be
+ * tested/maintained on other OSes too.
  */
 #define PG_THREADS_WIN32
 #define PG_THREADS_NEED_DESTRUCTOR_TABLE
@@ -198,7 +197,7 @@ typedef void (*pg_tss_dtor_t) (void *);
 extern int pg_tss_create(pg_tss_t *tss_id, pg_tss_dtor_t destructor);
 extern void pg_tss_dtor_delete(pg_tss_t tss_id);
 #ifdef PG_THREADS_NEED_DESTRUCTOR_TABLE
-extern void pg_tss_ensure_destructors_will_run();
+extern void pg_tss_ensure_destructors_in_this_thread();
 #endif
 
 static inline void *
@@ -216,7 +215,7 @@ pg_tss_set(pg_tss_t tss_id, void *value)
 {
 #ifdef PG_THREADS_NEED_DESTRUCTOR_TABLE
 	if (value)
-		pg_tss_ensure_destructors_will_run();
+		pg_tss_ensure_destructors_in_this_thread();
 #endif
 
 #ifdef PG_THREADS_WIN32
