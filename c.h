@@ -5,7 +5,7 @@
 #define WIN32
 #endif
 #define Min(a, b) ((a) < (b) ? (a) : (b))
-#define Assert(...) assert(__VA_ARGS__)
+#define Assert(x) assert(x)
 #define USE_ASSERTION_CHECKING
 #define pg_read_barrier()
 #define pg_write_barrier()
