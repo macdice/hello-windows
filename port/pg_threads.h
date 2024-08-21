@@ -235,7 +235,7 @@ pg_tss_set(pg_tss_t tss_id, void *value)
  */
 
 #ifdef PG_THREADS_WIN32
-typedef SRWLock pg_rwlock_t;
+typedef SRWLOCK pg_rwlock_t;
 #define PG_RWLOCK_STATIC_INIT SRWLOCK_INIT
 #else
 typedef pthread_rwlock_t pg_rwlock_t;
