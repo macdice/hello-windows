@@ -360,21 +360,16 @@ pg_tss_create(pg_tss_t *tss_id, pg_tss_dtor_t destructor)
 #endif
   
 #ifdef PG_THREADS_WIN32
-	/*
-	 * Allocate a native TLS index.
-	 */
-	*tss_id = TlsAlloc(NULL);
+	/* Windows native TSL, our own destructors machinery. */
+	*tss_id = TlsAlloc();
 	if (*tss_id == TLS_OUT_OF_INDEXES)
 		return pg_thrd_error;
 #elif defined(PG_THREADS_PTHREAD) && defined(PG_THREADS_NEED_DESTRUCTOR_TABLE)
-	/*
-	 * Build mode where we test the in-house destructor table
-	 * code, so we don't give the destructor to the pthread API.
-	 */
+	/* POSIX, but testing our own destructor machinery. */
 	if (pthread_key_create(tss_id, NULL) != 0)
 	  return pg_thrd_error;
 #else
-	/* Just let pthread API handle it. */
+	/* POSIX handle destructors. */
 	return pg_thrd_maperror(pthread_key_create(tss_id, destructor));
 #endif	
 
