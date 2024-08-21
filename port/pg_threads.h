@@ -243,7 +243,7 @@ typedef pthread_rwlock_t pg_rwlock_t;
 #endif
 
 static inline int
-pg_rwlock_init(pg_rwlock_t *lock, int type)
+pg_rwlock_init(pg_rwlock_t *lock)
 {
 #ifdef PG_THREADS_WIN32
   InitializeSRWLock(lock);
@@ -397,7 +397,7 @@ static inline int
 pg_cnd_wait(pg_cnd_t *condvar, pg_mtx_t *mutex)
 {
 #ifdef PG_THREADS_WIN32
-	SleepConditionVariableSRW(condvar, mutex, INFINITE);
+	SleepConditionVariableSRW(condvar, mutex, INFINITE, 0);
 	return pg_thrd_success;
 #else
 	return pg_thrd_maperror(pthread_cond_wait(condvar, mutex));
