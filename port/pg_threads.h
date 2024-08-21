@@ -275,17 +275,32 @@ pg_rwlock_wrlock(pg_rwlock_t *lock)
 #endif
 }
 
+/*
+ * Unfortunately Windows makes you say whether you're unlocking a read lock or
+ * a write lock, so we have to expose that here too.  POSIX already knows.
+ */
+
 static inline int
-pg_rwlock_unlock(pg_rwlock_t *lock)
+pg_wrlock_unlock(pg_rwlock_t *lock)
 {
 #ifdef PG_THREADS_WIN32
-  ReleaseSRWLock(lock);
+  ReleaseSRWLockExclusive(lock);
 	return pg_thrd_success;
 #else
 	return pg_thrd_maperror(pthread_rwlock_unlock(lock));
 #endif
 }
 
+static inline int
+pg_rdlock_unlock(pg_rwlock_t *lock)
+{
+#ifdef PG_THREADS_WIN32
+  ReleaseSRWLockShared(lock);
+	return pg_thrd_success;
+#else
+	return pg_thrd_maperror(pthread_rwlock_unlock(lock));
+#endif
+}
 
 /*-------------------------------------------------------------------------
  *
@@ -341,7 +356,7 @@ static inline int
 pg_mtx_unlock(pg_mtx_t *mutex)
 {
 #ifdef PG_THREADS_WIN32
-  return pg_rwlock_unlock(mutex);
+  return pg_wrlock_unlock(mutex);
 #else
 	return pg_thrd_maperror(pthread_mutex_unlock(mutex));
 #endif

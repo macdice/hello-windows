@@ -230,7 +230,7 @@ pg_tss_dtor_set(pg_tss_t tss_id, pg_tss_dtor_t destructor)
       dtor_table_count++;
     }
   
-  pg_rwlock_unlock(&dtor_table_lock);
+  pg_wrlock_unlock(&dtor_table_lock);
   
   return have_space;
 }
@@ -268,7 +268,7 @@ pg_tss_run_destructors(void *data)
 	      seen_non_null_value = true;
 	      
 	      /* Unlock while running the destructor. */
-	      pg_rwlock_unlock(&dtor_table_lock);
+	      pg_rdlock_unlock(&dtor_table_lock);
 	      dtor_table[i].function(value);
 	      pg_rwlock_rdlock(&dtor_table_lock);
 	    }
@@ -278,7 +278,7 @@ pg_tss_run_destructors(void *data)
       if (!seen_non_null_value)
 	break;
     }
-  pg_rwlock_unlock(&dtor_table_lock);
+  pg_rdlock_unlock(&dtor_table_lock);
 }
 
 static void
@@ -411,7 +411,7 @@ pg_tss_dtor_delete(pg_tss_t tss_id)
 	  break;
 	}
     }
-  pg_rwlock_unlock(&dtor_table_lock);
+  pg_wrlock_unlock(&dtor_table_lock);
 #endif
 
 #ifdef PG_THREADS_WIN32
