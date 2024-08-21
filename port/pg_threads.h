@@ -23,7 +23,7 @@
 #ifndef PG_THREADS_H
 #define PG_THREADS_H
 
-#if WIN32
+#ifdef WIN32
 /*
  * We use the macro PG_THREADS_WIN32 rather than WIN32 directly, to
  * keep a clear distinction between the Windows native APIs and the
