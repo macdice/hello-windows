@@ -189,14 +189,13 @@ pg_tss_dtor_set(pg_tss_t tss_id, pg_tss_dtor_t destructor)
   
   pg_rwlock_wrlock(&dtor_table_lock);
 
-	printf("pg_tss_dtor_set %zu, %zu\n", dtor_table_count, dtor_table_capacity);
   /* Make sure we have space, or fail. */
   if (dtor_table_count == dtor_table_capacity)
     {
       struct dtor_table_entry *new_dtor_table;
       size_t new_dtor_table_capacity;
 
-      new_dtor_table_capacity = Min(1, dtor_table_capacity * 2);
+      new_dtor_table_capacity = Max(1, dtor_table_capacity * 2);
       new_dtor_table = malloc(sizeof(dtor_table[0]) * new_dtor_table_capacity);
       if (new_dtor_table == NULL)
 	{
@@ -262,6 +261,10 @@ pg_tss_run_destructors(void *data)
 
 	  if (value)
 	    {
+			pg_tss_dtor_t function = dtor_table[slot].function;
+
+			Assert(function);
+
 	      /*
 	       * We'll need to go around again to make sure that a
 	       * destructor called in this iteration didn't set
@@ -271,7 +274,7 @@ pg_tss_run_destructors(void *data)
 	      
 	      /* Unlock while running the destructor. */
 	      pg_rdlock_unlock(&dtor_table_lock);
-	      dtor_table[i].function(value);
+	      function(value);
 	      pg_rwlock_rdlock(&dtor_table_lock);
 	    }
 	}
@@ -365,7 +368,7 @@ pg_tss_create(pg_tss_t *tss_id, pg_tss_dtor_t destructor)
 	*tss_id = TlsAlloc();
 	if (*tss_id == TLS_OUT_OF_INDEXES)
 		return pg_thrd_error;
-#elif defined(PG_THREADS_PTHREAD) && defined(PG_THREADS_NEED_DESTRUCTOR_TABLE)
+#elif defined(PG_THREADS_NEED_DESTRUCTOR_TABLE)
 	/* POSIX, but testing our own destructor machinery. */
 	if (pthread_key_create(tss_id, NULL) != 0)
 	  return pg_thrd_error;
