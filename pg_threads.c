@@ -15,6 +15,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 
@@ -188,6 +189,7 @@ pg_tss_dtor_set(pg_tss_t tss_id, pg_tss_dtor_t destructor)
   
   pg_rwlock_wrlock(&dtor_table_lock);
 
+	printf("pg_tss_dtor_set %zu, %zu\n", dtor_table_count, dtor_table_capacity);
   /* Make sure we have space, or fail. */
   if (dtor_table_count == dtor_table_capacity)
     {
