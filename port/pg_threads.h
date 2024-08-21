@@ -1,69 +1,82 @@
-/*
- * A multi-threading API abstraction loosely based on the C11 standard's
- * <threads.h> header.  The identifiers have a pg_ prefix.  Perhaps one day
- * we'll use standard C threads directly, and we'll drop the prefixes.
+/*-------------------------------------------------------------------------
  *
- * Exceptions:
- *  - pg_thrd_barrier_t is not based on C11
+ * pg_threads.h
+ *    Portable multi-threading API.
+ *
+ * A multi-threading API abstraction loosely based on a subset C11
+ * standard's <threads.h> header.  The identifiers have a pg_ prefix.
+ *
+ * We have some extensions of our own, not present in C11:
+ *
+ * - pg_rwlock_t for read/write locks
+ * - pg_mtx_t static initializer PG_MTX_STATIC_INIT
+ * - pg_barrier_t
+ *
+ * Portions Copyright (c) 1996-2024, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *    src/port/pg_threads.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef PG_THREADS_H
 #define PG_THREADS_H
 
-#ifdef WIN32
-#include <windows.h>
+#if WIN32
+/*
+ * We use the macro PG_THREADS_WIN32 rather than WIN32 directly, to
+ * keep a clear distinction between the Windows native APIs and the
+ * true C11 APIs available in Visual Studio 2022, which may become an
+ * option later.  The Windows native APIs need an in-house
+ * implementation of TSS destructors, which we also gate separately so
+ * that it can be tested on other OSes too.
+ */
+#define PG_THREADS_WIN32
+#define PG_THREADS_NEED_DESTRUCTOR_TABLE
+#endif
+
+/*
+ * To test our own destructor mechanism on POSIX systems, for the
+ * benefit of developers maintaining it, define this macro.
+ */
+#define PG_THREADS_NEED_DESTRUCTOR_TABLE
+
+#if defined(PG_THREADS_WIN32)
+#include <processthreadsapi.h>
 #else
 #include <pthread.h>
 #endif
 
-/* macOS lacks pthread_barrier_t, so we define our own. */
-#if !defined(WIN32) && !defined(HAVE_PTHREAD_BARRIER_WAIT)
-typedef struct pg_pthread_barrier
-{
-	bool		sense;			/* we only need a one bit phase */
-	int			count;			/* number of threads expected */
-	int			arrived;		/* number of threads that have arrived */
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
-} pthread_barrier_t;
-#define PTHREAD_BARRIER_SERIAL_THREAD (-1)
-extern int	pthread_barrier_init(pthread_barrier_t *barrier,
-								 const void *attr,
-								 int count);
-extern int	pthread_barrier_wait(pthread_barrier_t *barrier);
-extern int	pthread_barrier_destroy(pthread_barrier_t *barrier);
-#endif
 
-/* Thread local storage class, like C11 thread_local. */
-#ifdef _MSC_VER
+/*-------------------------------------------------------------------------
+ *
+ * Thread-local storage class.  This is a C11 language feature, not a
+ * library feature.  We don't require C11, but we expect compilers to
+ * provide some way to request thread-local storage.  (See also
+ * pg_tss_id, which is similar but uses explicit set/get functions and
+ * supports destructor function that are called at thread exit.)
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#if defined(_MSC_VER)
 /* MSVC */
 #define pg_thread_local __declspec(thread)
-#else
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_C)
 /* GCC, Clang, Intel C, XLC, Solaris Studio */
 #define pg_thread_local __thread
-#endif
-
-#ifdef WIN32
-typedef HANDLE pg_thrd_t;
-typedef CRITICAL_SECTION pg_mtx_t;
-typedef CONDITION_VARIABLE pg_cnd_t;
-typedef SYNCHRONIZATION_BARRIER pg_thrd_barrier_t;
-typedef DWORD pg_tss_t;
-typedef INIT_ONCE pg_once_flag;
-#define PG_ONCE_FLAG_INIT INIT_ONCE_STATIC_INIT
 #else
-typedef pthread_t pg_thrd_t;
-typedef pthread_mutex_t pg_mtx_t;
-typedef pthread_cond_t pg_cnd_t;
-typedef pthread_barrier_t pg_thrd_barrier_t;
-typedef pthread_key_t pg_tss_t;
-typedef pthread_once_t pg_once_flag;
-#define PG_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+#error "no known thread_local storage class for this compiler"
 #endif
 
-typedef int (*pg_thrd_start_t) (void *);
-typedef void (*pg_tss_dtor_t) (void *);
-typedef void (*pg_call_once_function_t) (void);
+
+/*-------------------------------------------------------------------------
+ *
+ * Return values.
+ *
+ *-------------------------------------------------------------------------
+ */
 
 typedef enum pg_thrd_error_t
 {
@@ -71,91 +84,244 @@ typedef enum pg_thrd_error_t
 	pg_thrd_nomem = 1,
 	pg_thrd_timedout = 2,
 	pg_thrd_busy = 3,
-	pg_thrd_error = 4
+	pg_thrd_error = 4,
+
+	/* Not from C11.  Needed by our pg_barrier_wait(). */
+	pg_thrd_success_last = 5,
 } pg_thrd_error_t;
 
-typedef enum pg_mtx_type_t
+static inline int
+pg_thrd_maperror(int error)
 {
-	pg_mtx_plain = 0
-} pg_mtx_type_t;
+#ifdef PG_THREADS_WIN32
+	return error ? pg_thrd_success : pg_thrd_error;
+#else
+	return error == 0 ? pg_thrd_success : pg_thrd_error;
+#endif
+}
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Threads.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_USE_WIN32
+typedef HANDLE pg_thrd_t;
+#else
+typedef pthread_t pg_thrd_t;
+#endif
+
+typedef int (*pg_thrd_start_t) (void *);
 
 extern int	pg_thrd_create(pg_thrd_t *thread, pg_thrd_start_t function, void *argument);
 extern int	pg_thrd_join(pg_thrd_t thread, int *result);
 extern void pg_thrd_exit(int result);
 
 static inline int
-pg_thrd_maperror(int error)
-{
-#ifdef WIN32
-	/* Windows functions generally return TRUE for success. */
-	return error ? pg_thrd_success : pg_thrd_error;
-#else
-	/* POSIX functions generally return 0 for success. */
-	return error == 0 ? pg_thrd_success : pg_thrd_error;
-#endif
-}
-
-#ifdef WIN32
-extern BOOL CALLBACK pg_call_once_trampoline(pg_once_flag *flag, void *parameter, void **context);
-#endif
-
-static inline void
-pg_call_once(pg_once_flag *flag, pg_call_once_function_t function)
-{
-#ifdef WIN32
-	InitOnceExecuteOnce(flag, pg_call_once_trampoline, (void *) function, NULL);
-#else
-	pthread_once(flag, function);
-#endif
-}
-
-static inline int
 pg_thrd_equal(pg_thrd_t lhs, pg_thrd_t rhs)
 {
-#ifdef WIN32
+#ifdef PG_THREADS_WIN32
 	return lhs == rhs;
 #else
 	return pthread_equal(lhs, rhs);
 #endif
 }
 
-static inline int
-pg_tss_create(pg_tss_t *key, pg_tss_dtor_t destructor)
-{
-#ifdef WIN32
-	*key = FlsAlloc(destructor);
-	return *key == FLS_OUT_OF_INDEXES ? pg_thrd_error : pg_thrd_success;
+
+/*-------------------------------------------------------------------------
+ *
+ * Initialization functions.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_WIN32
+typedef INIT_ONCE pg_once_flag;
+#define PG_ONCE_FLAG_INIT INIT_ONCE_STATIC_INIT
 #else
-	return pg_thrd_maperror(pthread_key_create(key, destructor));
+typedef pthread_once_t pg_once_flag;
+#define PG_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+#endif
+
+typedef void (*pg_call_once_function_t) (void);
+
+#ifdef PG_THREADS_WIN32
+extern BOOL CALLBACK pg_call_once_trampoline(pg_once_flag *flag,
+					     void *parameter,
+					     void **context);
+#endif
+
+static inline void
+pg_call_once(pg_once_flag *flag, pg_call_once_function_t function)
+{
+#ifdef PG_THREADS_WIN32
+	InitOnceExecuteOnce(flag, pg_call_once_trampoline, (void *) function, NULL);
+#else
+	pthread_once(flag, function);
 #endif
 }
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Thread-specific storage.  This mechanism is an alternative to using
+ * the pg_thread_local storage class, which should be preferred where
+ * possible.  The only advantage is that the TSS interface allows a
+ * destructor functions to be run for non-NULL values when each thread
+ * exits.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_WIN32
+typedef DWORD pg_tss_t;
+#else
+typedef pthread_key_t pg_tss_t;
+#endif
+
+typedef void (*pg_tss_dtor_t) (void *);
+
+/*
+ * How long before we give up trying to call all the registered
+ * destructors, if the destructors themselves are calling pg_tss_set()
+ * to befuddle us by storing new non-NULL values?
+ */
+#ifdef PG_THREADS_NEED_DESTRUCTOR_TABLE
+#define PG_TSS_DTOR_ITERATIONS 8
+#else
+#define PG_TSS_DTOR_ITERATIONS PTRHEAD_DESTRUCTOR_ITERATIONS
+#endif
+
+extern int pg_tss_create(pg_tss_t *tss_id, pg_tss_dtor_t destructor);
+extern void pg_tss_dtor_delete(pg_tss_t tss_id);
+#ifdef PG_THREADS_NEED_DESTRUCTOR_TABLE
+extern void pg_tss_ensure_destructors_will_run();
+#endif
 
 static inline void *
 pg_tss_get(pg_tss_t key)
 {
-#ifdef WIN32
-	return FlsGetValue(key);
+#ifdef PG_THREADS_WIN32
+	return TlsGetValue(key);
 #else
 	return pthread_getspecific(key);
 #endif
 }
 
 static inline int
-pg_tss_set(pg_tss_t key, void *value)
+pg_tss_set(pg_tss_t tss_id, void *value)
 {
-#ifdef WIN32
-	return pg_thrd_maperror(FlsSetValue(key, value));
+#ifdef PG_THREADS_NEED_DESTRUCTOR_TABLE
+	if (value)
+		pg_tss_ensure_destructors_will_run();
+#endif
+
+#ifdef PG_THREADS_WIN32
+	return pg_thrd_maperror(TlsSetValue(tss_id, value));
 #else
-	return pg_thrd_maperror(pthread_setspecific(key, value));
+	return pg_thrd_maperror(pthread_setspecific(tss_id, value));
+#endif
+}
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Read/write locks.  Not in C11.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_WIN32
+typedef SRWLock pg_rwlock_t;
+#define PG_RWLOCK_STATIC_INIT SRWLOCK_INIT
+#else
+typedef pthread_rwlock_t pg_rwlock_t;
+#define PG_RWLOCK_STATIC_INIT PTHREAD_RWLOCK_INITIALIZER
+#endif
+
+static inline int
+pg_rwlock_init(pg_rwlock_t *lock, int type)
+{
+#ifdef PG_THREADS_WIN32
+  InitializeSRWLock(lock);
+  return pg_thrd_success;
+#else
+	return pg_thrd_maperror(pthread_rwlock_init(lock, NULL));
 #endif
 }
 
 static inline int
+pg_rwlock_rdlock(pg_rwlock_t *lock)
+{
+#ifdef PG_THREADS_WIN32
+	AcquireSRWLockShared(lock);
+	return pg_thrd_success;
+#else
+	return pg_thrd_maperror(pthread_rwlock_rdlock(lock));
+#endif
+}
+
+static inline int
+pg_rwlock_wrlock(pg_rwlock_t *lock)
+{
+#ifdef PG_THEADS_WIN32
+	AcquireSRWLockExclusive(lock);
+	return pg_thrd_success;
+#else
+	return pg_thrd_maperror(pthread_rwlock_wrlock(lock));
+#endif
+}
+
+static inline int
+pg_rwlock_unlock(pg_rwlock_t *lock)
+{
+#ifdef PG_THREADS_WIN32
+  ReleaseSRWLock(lock);
+	return pg_thrd_success;
+#else
+	return pg_thrd_maperror(pthread_rwlock_unlock(lock));
+#endif
+}
+
+
+/*-------------------------------------------------------------------------
+ *
+ * Simple mutexes.
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_WIN32
+/*
+ * CRITICAL_SECTION might be the most obvious Windows mechanism for
+ * pg_mtx_t, but SRWLock is reported to be at least as fast when used
+ * only in exclusive mode, and has the advantage of a static
+ * initializer (CRITICAL_SECTION must be initialized and destroyed
+ * explicitly because it allocates resources other than the space it
+ * occupies.)  C11 doesn't define a static initializer (possibly
+ * because CRITICAL_SECTION doesn't?), but we want one anyway.  So
+ * we'll just point pg_mtx_t to pg_rwlock_t.
+ */
+typedef pg_rwlock_t pg_mtx_t;
+#define PG_MTX_STATIC_INIT PG_RWLOCK_STATIC_INIT
+#else
+typedef pthread_mutex_t pg_mtx_t;
+#define PG_MTX_STATIC_INIT PTHREAD_MUTEX_INITIALIZER
+#endif
+
+typedef enum pg_mtx_type_t
+{
+	pg_mtx_plain = 0
+} pg_mtx_type_t;
+
+
+static inline int
 pg_mtx_init(pg_mtx_t *mutex, int type)
 {
-#ifdef WIN32
-	InitializeCriticalSection(mutex);
-	return pg_thrd_success;
+#ifdef PG_THREADS_WIN32
+  return pg_rwlock_init(mutex);
 #else
 	return pg_thrd_maperror(pthread_mutex_init(mutex, NULL));
 #endif
@@ -164,9 +330,8 @@ pg_mtx_init(pg_mtx_t *mutex, int type)
 static inline int
 pg_mtx_lock(pg_mtx_t *mutex)
 {
-#ifdef WIN32
-	EnterCriticalSection(mutex);
-	return pg_thrd_success;
+#ifdef PG_THREADS_WIN32
+  return pg_rwlock_wrlock(mutex);
 #else
 	return pg_thrd_maperror(pthread_mutex_lock(mutex));
 #endif
@@ -175,9 +340,8 @@ pg_mtx_lock(pg_mtx_t *mutex)
 static inline int
 pg_mtx_unlock(pg_mtx_t *mutex)
 {
-#ifdef WIN32
-	LeaveCriticalSection(mutex);
-	return pg_thrd_success;
+#ifdef PG_THREADS_WIN32
+  return pg_rwlock_unlock(mutex);
 #else
 	return pg_thrd_maperror(pthread_mutex_unlock(mutex));
 #endif
@@ -186,18 +350,31 @@ pg_mtx_unlock(pg_mtx_t *mutex)
 static inline int
 pg_mtx_destroy(pg_mtx_t *mutex)
 {
-#ifdef WIN32
-	DeleteCriticalSection(mutex);
-	return pg_thrd_success;
+#ifdef PG_THREADS_WIN32
+  return pg_thrd_success;
 #else
 	return pg_thrd_maperror(pthread_mutex_destroy(mutex));
 #endif
 }
 
+
+/*-------------------------------------------------------------------------
+ *
+ * Condition variables.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_WIN32
+typedef CONDITION_VARIABLE pg_cnd_t;
+#else
+typedef pthread_cond_t pg_cnd_t;
+#endif
+
 static inline int
 pg_cnd_init(pg_cnd_t *condvar)
 {
-#ifdef WIN32
+#ifdef PG_THREADS_WIN32
 	InitializeConditionVariable(condvar);
 	return pg_thrd_success;
 #else
@@ -208,7 +385,7 @@ pg_cnd_init(pg_cnd_t *condvar)
 static inline int
 pg_cnd_broadcast(pg_cnd_t *condvar)
 {
-#ifdef WIN32
+#ifdef PG_THREADS_WIN32
 	WakeAllConditionVariable(condvar);
 	return pg_thrd_success;
 #else
@@ -219,8 +396,8 @@ pg_cnd_broadcast(pg_cnd_t *condvar)
 static inline int
 pg_cnd_wait(pg_cnd_t *condvar, pg_mtx_t *mutex)
 {
-#ifdef WIN32
-	SleepConditionVariableCS(condvar, mutex, INFINITE);
+#ifdef PG_THREADS_WIN32
+	SleepConditionVariableSRW(condvar, mutex, INFINITE);
 	return pg_thrd_success;
 #else
 	return pg_thrd_maperror(pthread_cond_wait(condvar, mutex));
@@ -230,51 +407,111 @@ pg_cnd_wait(pg_cnd_t *condvar, pg_mtx_t *mutex)
 static inline int
 pg_cnd_destroy(pg_cnd_t *condvar)
 {
-#ifdef WIN32
+#ifdef PG_THREADS_WIN32
 	return pg_thrd_success;
 #else
 	return pg_thrd_maperror(pthread_cond_destroy(condvar));
 #endif
 }
 
-static inline int
-pg_thrd_barrier_init(pg_thrd_barrier_t *barrier, int count)
+
+/*-------------------------------------------------------------------------
+ *
+ * Barriers.  Not in C11.  Apple currently lacks the POSIX version.
+ * We assume that the OS might know a better way to implement it that
+ * we do, so we only provide our own if we have to.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#ifdef PG_THREADS_USE_WIN32
+typedef SYNCHRONIZATION_BARRIER pg_barrier_t;
+#elif defined(HAVE_PTHREAD_BARRIER)
+typedef pthread_barrier_t pg_barrier_t;
+#else
+typedef struct pg_barrier_t
 {
-#ifdef WIN32
+	bool		sense;
+	int		expected;
+  int		arrived;
+	pg_mtx_t mutex;
+	pg_cnd_t cond;
+} pg_barrier_t;
+#endif
+
+static inline int
+pg_barrier_init(pg_barrier_t *barrier, int count)
+{
+#ifdef PG_THREADS_WIN32
 	return pg_thrd_maperror(InitializeSynchronizationBarrier(barrier, count, 0));
-#else
+#elif defined(HAVE_PTHREAD_BARRIER)
 	return pg_thrd_maperror(pthread_barrier_init(barrier, NULL, count));
-#endif
-}
-
-static inline int
-pg_thrd_barrier_wait(pg_thrd_barrier_t *barrier)
-{
-	/*
-	 * Windows and POSIX both have a special value returned to only one thread,
-	 * but it's not clear how to model that with a C11-style return value,
-	 * since pg_thrd_barrier_t is not from C11.  Let's not invent something
-	 * unless we eventually need.
-	 */
-#ifdef WIN32
-	EnterSynchronizationBarrier(barrier, SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY);
-	return pg_thrd_success;
 #else
-	int error = pthread_barrier_wait(barrier);
-	if (error == 0 || error == PTHREAD_BARRIER_SERIAL_THREAD)
-		return pg_thrd_success;
-	else
+	barrier->sense = false;
+	barrier->expected = count;
+	barrier->arrived = 0;
+	if (pg_cnd_init(&barrier->cond) != pg_thrd_success)
+	  return pg_thrd_error;
+	if (pg_mtx_init(&barrier->mutex, pg_mtx_plain) != pg_thrd_success)
+	{
+		pg_cnd_destroy(&barrier->cond);
 		return pg_thrd_error;
+	}
+	return pg_thrd_success;
 #endif
 }
 
 static inline int
-pg_thrd_barrier_destroy(pg_thrd_barrier_t *barrier)
+pg_barrier_wait(pg_barrier_t *barrier)
 {
-#ifdef WIN32
-	return pg_thrd_success;
+#ifdef PG_THREADS_WIN32
+  if (EnterSynchronizationBarrier(barrier, SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY))
+    return pg_thrd_success_last;
+  else
+    return pg_thrd_success;
+#elif defined(HAVE_PTHREAD_BARRIER)
+  int error = pthread_barrier_wait(barrier);
+  if (error == 0)
+    return pg_thrd_success;
+  else if (error == PTHREAD_BARRIER_SERIAL_THREAD)
+    return pg_thrd_success_last;
+  else
+    return pg_thrd_error;
 #else
-	return pg_thrd_maperror(pthread_barrier_destroy(barrier));
+	bool		initial_sense;
+
+	pg_mtx_lock(&barrier->mutex);
+	barrier->arrived++;
+	Assert(barrier->arrived <= barrier->expected);
+	if (barrier->arrived == barrier->expected)
+	{
+		barrier->arrived = 0;
+		barrier->sense = !barrier->sense;
+		pg_mtx_unlock(&barrier->mutex);
+		pg_cnd_broadcast(&barrier->cond);
+		return pg_thrd_success_last;
+	}
+	initial_sense = barrier->sense;
+	do
+	{
+		pg_cnd_wait(&barrier->cond, &barrier->mutex);
+	} while (barrier->sense == initial_sense);
+	pg_mtx_unlock(&barrier->mutex);
+	return pg_thrd_success;
+#endif
+}
+
+static inline int
+pg_barrier_destroy(pg_barrier_t *barrier)
+{
+#ifdef PG_THREADS_WIN32
+	return pg_thrd_success;
+#elif defined(HAVE_PTHREAD_BARRIER)
+	return pg_thrd_maperror(pthread_barrier_destroy(barrier));	
+#else
+	pg_mtx_destroy(&barrier->mutex);
+	pg_cnd_destroy(&barrier->cond);
+	return pg_thrd_success;
 #endif
 }
 
