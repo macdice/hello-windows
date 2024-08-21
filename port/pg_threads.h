@@ -43,7 +43,7 @@
 #define PG_THREADS_NEED_DESTRUCTOR_TABLE
 
 #if defined(PG_THREADS_WIN32)
-#include <processthreadsapi.h>
+#include <windows.h>
 #else
 #include <pthread.h>
 #endif
