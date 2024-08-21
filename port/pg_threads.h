@@ -108,7 +108,7 @@ pg_thrd_maperror(int error)
  *-------------------------------------------------------------------------
  */
 
-#ifdef PG_THREADS_USE_WIN32
+#ifdef PG_THREADS_WIN32
 typedef HANDLE pg_thrd_t;
 #else
 typedef pthread_t pg_thrd_t;
@@ -424,7 +424,7 @@ pg_cnd_destroy(pg_cnd_t *condvar)
  *-------------------------------------------------------------------------
  */
 
-#ifdef PG_THREADS_USE_WIN32
+#ifdef PG_THREADS_WIN32
 typedef SYNCHRONIZATION_BARRIER pg_barrier_t;
 #elif defined(HAVE_PTHREAD_BARRIER)
 typedef pthread_barrier_t pg_barrier_t;
