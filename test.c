@@ -1,6 +1,7 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
+#include <afunix.h>
 typedef SOCKET sock_t;
 #else
 #include <errno.h>
@@ -13,15 +14,18 @@ typedef int sock_t;
 #define closesocket close
 #endif
 
+#ifdef __FreeBSD__
+#include <aio.h>
+#endif
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define SOCKET_PATH "/tmp/foo"
-#define HELLO "HELLO\n"
-#define GOODBYE "FATAL: flux capacitor failed\n"
-#define SELECT "SELECT 1 + 1\n"
+#define GOODBYE "FATAL: flux capacitor failed"
+#define SELECT "SELECT 1 + 1;"
 
 static int
 get_error(int r)
@@ -69,8 +73,10 @@ int main()
 
 
 	/*=================================================================
-	 * Traditional BSD sockets
+	 * Synchronous
 	 *=================================================================*/
+
+	printf("=== synchronous sockets ===\n");
 
 	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	assert(client_socket != (sock_t) -1);
@@ -78,50 +84,56 @@ int main()
 
 	server_socket = accept(listen_socket, NULL, NULL);
 	assert(server_socket != (sock_t) -1);
-	assert(send(server_socket, HELLO, sizeof(HELLO), 0) == sizeof(HELLO));
-
-	assert(recv(client_socket, buffer, sizeof(buffer), 0) == sizeof(HELLO));
-	assert(strcmp(buffer, HELLO) == 0);
-
 	assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
 	closesocket(server_socket);
 
 	r = send(client_socket, SELECT, sizeof(SELECT), 0);
 	error = get_error(r);
-	printf("send after server closed -> %d, %d\n", r, error);
+	printf("send -> %d, error = %d\n", r, error);
 	r = recv(client_socket, buffer, sizeof(buffer), 0);
 	error = get_error(r);
-	printf("recv after server closed -> %d, %d\n", r, error);
+	printf("recv -> \"%.*s\", error = %d\n", r > 0 ? r : 0, buffer, error);
 
 	closesocket(client_socket);
 
-#ifdef __FreeBSD__x
+#ifdef __FreeBSD__
 
 	/*=================================================================
-	 * POSIX API.  Doesn't actually work on many systems, but at least
-	 * FreeBSD can do it, and maybe the proprietary Unixen.
+	 * POSIX AIO.  Doesn't actually work on many systems, but at least
+	 * FreeBSD can do it, and maybe some proprietary Unixen.
 	 *=================================================================*/
+
+	printf("=== posix aio ===\n");
 
 	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	assert(client_socket != (sock_t) -1);
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
-	server_socket = accept(listen_socket, NULL, NULL);
-	assert(server_socket != (sock_t) -1);
-	assert(send(server_socket, HELLO, sizeof(HELLO), 0) == sizeof(HELLO));
+	{
+		/* Start reading from the socket directly into our buffer. */
+		struct aiocb aiocb = {
+			.aio_fildes = client_socket,
+			.aio_buf = buffer,
+			.aio_nbytes = sizeof(buffer),
+			.aio_sigevent = { .sigev_notify = SIGEV_NONE }
+		};
+		struct aiocb *aiocb_done;
+		assert(aio_read(&aiocb) == 0);
 
-	assert(recv(client_socket, buffer, sizeof(buffer), 0) == sizeof(HELLO));
-	assert(strcmp(buffer, HELLO) == 0);
+		server_socket = accept(listen_socket, NULL, NULL);
+		assert(server_socket != (sock_t) -1);
+		assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
+		closesocket(server_socket);
 
-	assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
-	closesocket(server_socket);
+		r = send(client_socket, SELECT, sizeof(SELECT), 0);
+		error = get_error(r);
+		printf("send -> %d, error = %d\n", r, error);
 
-	r = send(client_socket, SELECT, sizeof(SELECT), 0);
-	error = get_error(r);
-	printf("send after server closed -> %d, %d\n", r, error);
-	r = recv(client_socket, buffer, sizeof(buffer), 0);
-	error = get_error(r);
-	printf("recv after server closed -> %d, %d\n", r, error);
+		r = aio_waitcomplete(&aiocb_done, NULL);
+		assert(aiocb_done == &aiocb);
+		error = r < 0 ? errno : 0;
+		printf("async recv -> \"%.*s\", error = %d\n", r > 0 ? r : 0, buffer, error);
+	}
 
 	closesocket(client_socket);
 
