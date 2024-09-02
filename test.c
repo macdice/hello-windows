@@ -119,7 +119,7 @@ int main()
 		assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
 		closesocket(server_socket);
 
-		/* Client tries to send a query, and reads response. */
+		/* Client tries to send a query, and reaps async response. */
 		r = send(client_socket, SELECT, sizeof(SELECT), 0);
 		error = get_error(r);
 		printf("send -> %d, error = %d\n", r, error);
@@ -144,13 +144,14 @@ int main()
 
 	{
 		/* Client starts receiving into buffer asynchronously. */
-		WSA_OVERLAPPED overlapped = {.event = WSACreateEvent()};
+		WSAOVERLAPPED overlapped = {.event = WSACreateEvent()};
 		WSABUF wbuffer {
 			.buf = buffer,
 			.len = sizeof(buffer)
 		};
 		DWORD flags;
 		DWORD transferred;
+		BOOL result;
 		assert(WSARecv(client_socket, &wbuffer, 1, NULL, 0, &overlapped, NULL) == SOCKET_ERROR);
 		assert(WSAGetLastError() == WSA_IO_PENDING);
 
@@ -160,13 +161,13 @@ int main()
 		assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
 		closesocket(server_socket);
 
-		/* Client tries to send a query, and reads response. */
+		/* Client tries to send a query, and reaps async response. */
 		r = send(client_socket, SELECT, sizeof(SELECT), 0);
 		error = get_error(r);
 		printf("send -> %d, error = %d\n", r, error);
-		assert(WSAGetOverlappedResult(client_socket, &overlapped, &transferred, TRUE, &flags));
+		result = WSAGetOverlappedResult(client_socket, &overlapped, &transferred, TRUE, &flags);
 		error = WSAGetLastError();
-		printf("async recv -> \"%.*s\", error = %d\n", r > 0 ? r : 0, buffer, error);
+		printf("async recv -> \"%.*s\", error = %d\n", result ? transferred : 0, buffer, error);
 	}
 
 	closesocket(client_socket);
