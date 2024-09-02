@@ -149,10 +149,10 @@ int main()
 			.buf = buffer,
 			.len = sizeof(buffer)
 		};
-		DWORD flags;
+		DWORD flags = 0;
 		DWORD transferred;
 		BOOL result;
-		assert(WSARecv(client_socket, &wbuffer, 1, NULL, 0, &overlapped, NULL) == SOCKET_ERROR);
+		assert(WSARecv(client_socket, &wbuffer, 1, NULL, &flags, &overlapped, NULL) == SOCKET_ERROR);
 		printf("error %d\n", WSAGetLastError());
 		assert(WSAGetLastError() == WSA_IO_PENDING);
 
