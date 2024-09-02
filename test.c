@@ -145,7 +145,7 @@ int main()
 	{
 		/* Client starts receiving asynchronously. */
 		WSAOVERLAPPED overlapped = {.hEvent = WSACreateEvent()};
-		WSABUF wbuffer {
+		WSABUF wbuffer = {
 			.buf = buffer,
 			.len = sizeof(buffer)
 		};
