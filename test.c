@@ -153,6 +153,7 @@ int main()
 		DWORD transferred;
 		BOOL result;
 		assert(WSARecv(client_socket, &wbuffer, 1, NULL, 0, &overlapped, NULL) == SOCKET_ERROR);
+		printf("error %d\n", WSAGetLastError());
 		assert(WSAGetLastError() == WSA_IO_PENDING);
 
 		/* Server accepts connection, sends GOODBYE and hangs up. */
