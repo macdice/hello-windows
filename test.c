@@ -94,7 +94,6 @@ int main()
 	closesocket(client_socket);
 
 #ifdef __FreeBSD__
-
 	printf("=== posix aio ===\n");
 
 	/* Client connects. */
@@ -134,7 +133,6 @@ int main()
 #endif
 
 #ifdef _WIN32
-
 	printf("=== windows overlapped ===\n");
 
 	/* Client connects. */
@@ -152,8 +150,8 @@ int main()
 		DWORD flags = 0;
 		DWORD transferred;
 		BOOL result;
+
 		assert(WSARecv(client_socket, &wbuffer, 1, NULL, &flags, &overlapped, NULL) == SOCKET_ERROR);
-		printf("error %d\n", WSAGetLastError());
 		assert(WSAGetLastError() == WSA_IO_PENDING);
 
 		/* Server accepts connection, sends GOODBYE and hangs up. */
@@ -167,12 +165,11 @@ int main()
 		error = get_error(r);
 		printf("send -> %d, error = %d\n", r, error);
 		result = WSAGetOverlappedResult(client_socket, &overlapped, &transferred, TRUE, &flags);
-		error = WSAGetLastError();
+		error = result ? 0 : WSAGetLastError();
 		printf("async recv -> \"%.*s\", error = %d\n", result ? transferred : 0, buffer, error);
 	}
 
 	closesocket(client_socket);
-
 #endif
 
 	closesocket(listen_socket);
