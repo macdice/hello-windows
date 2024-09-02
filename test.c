@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <afunix.h>
 typedef SOCKET sock_t;
+#pragma comment(lib, "ws2_32.lib") 
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -99,8 +100,8 @@ int main()
 #ifdef __FreeBSD__
 
 	/*=================================================================
-	 * POSIX AIO.  Doesn't actually work on many systems, but at least
-	 * FreeBSD can do it, and maybe some proprietary Unixen.
+	 * POSIX AIO.  Doesn't actually work on many POSIX systems, but at
+	 * least FreeBSD can do it, and maybe some proprietary Unixen.
 	 *=================================================================*/
 
 	printf("=== posix aio ===\n");
@@ -110,7 +111,6 @@ int main()
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
 	{
-		/* Start reading from the socket directly into our buffer. */
 		struct aiocb aiocb = {
 			.aio_fildes = client_socket,
 			.aio_buf = buffer,
@@ -128,7 +128,6 @@ int main()
 		r = send(client_socket, SELECT, sizeof(SELECT), 0);
 		error = get_error(r);
 		printf("send -> %d, error = %d\n", r, error);
-
 		r = aio_waitcomplete(&aiocb_done, NULL);
 		assert(aiocb_done == &aiocb);
 		error = r < 0 ? errno : 0;
