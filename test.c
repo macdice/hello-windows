@@ -70,7 +70,7 @@ int main()
 	assert(bind(listen_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 	assert(listen(listen_socket, 5) == 0);
 
-	printf("=== synchronous sockets ===\n");
+	printf("=== synchronous ===\n");
 
 	/* Client connects. */
 	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -103,7 +103,7 @@ int main()
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
 	{
-		/* Client starts receiving into buffer asynchronously. */
+		/* Client starts receiving asynchronously. */
 		struct aiocb aiocb = {
 			.aio_fildes = client_socket,
 			.aio_buf = buffer,
@@ -143,8 +143,8 @@ int main()
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
 	{
-		/* Client starts receiving into buffer asynchronously. */
-		WSAOVERLAPPED overlapped = {.event = WSACreateEvent()};
+		/* Client starts receiving asynchronously. */
+		WSAOVERLAPPED overlapped = {.hEvent = WSACreateEvent()};
 		WSABUF wbuffer {
 			.buf = buffer,
 			.len = sizeof(buffer)
