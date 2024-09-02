@@ -24,7 +24,11 @@ typedef int sock_t;
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define SOCKET_PATH "c:\\foo"
+#else
 #define SOCKET_PATH "/tmp/foo"
+#endif
 #define GOODBYE "FATAL: flux capacitor failed"
 #define SELECT "SELECT 1 + 1;"
 
@@ -100,8 +104,9 @@ int main()
 #ifdef __FreeBSD__
 
 	/*=================================================================
-	 * POSIX AIO.  Doesn't actually work on many POSIX systems, but at
-	 * least FreeBSD can do it, and maybe some proprietary Unixen.
+	 * Same sort of thing on FreeBSD.  (I just wrote this so I could
+	 * get the program structure right and then translate it to
+	 * Windowsian via CI...)
 	 *=================================================================*/
 
 	printf("=== posix aio ===\n");
