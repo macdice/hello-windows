@@ -45,7 +45,7 @@ get_error(int r)
 int main()
 {
 	const unsigned long one = 1;
-    struct sockaddr_un sa = {
+	struct sockaddr_un sa = {
 		.sun_family = AF_UNIX,
 		.sun_path = SOCKET_PATH
 	};
@@ -57,41 +57,33 @@ int main()
 	int r;
 
 #ifdef _WIN32
-    WSADATA wsaData;
-    assert(WSAStartup(0x202, &wsaData) == 0);
+	WSADATA wsaData;
+	assert(WSAStartup(0x202, &wsaData) == 0);
 #else
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-#if 0
-	memset(&sa, 0, sizeof(sa));
-	sa.sun_family = AF_UNIX;
-	strncpy(sa.sun_path, sizeof(sa.sun_path) - 1, SOCKET_PATH);
-#endif
-
+	/* Server starts listening for connections. */
 	unlink(sa.sun_path);
-
-    listen_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-    assert(listen_socket != (sock_t) -1);
+	listen_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+	assert(listen_socket != (sock_t) -1);
 	assert(bind(listen_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 	assert(listen(listen_socket, 5) == 0);
 
-
-	/*=================================================================
-	 * Synchronous
-	 *=================================================================*/
-
 	printf("=== synchronous sockets ===\n");
 
+	/* Client connects. */
 	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	assert(client_socket != (sock_t) -1);
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
+	/* Server accepts connection, sends GOODBYE and hangs up. */
 	server_socket = accept(listen_socket, NULL, NULL);
 	assert(server_socket != (sock_t) -1);
 	assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
 	closesocket(server_socket);
 
+	/* Client sends query, then reads response. */
 	r = send(client_socket, SELECT, sizeof(SELECT), 0);
 	error = get_error(r);
 	printf("send -> %d, error = %d\n", r, error);
@@ -103,19 +95,15 @@ int main()
 
 #ifdef __FreeBSD__
 
-	/*=================================================================
-	 * Same sort of thing on FreeBSD.  (I just wrote this so I could
-	 * get the program structure right and then translate it to
-	 * Windowsian via CI...)
-	 *=================================================================*/
-
 	printf("=== posix aio ===\n");
 
+	/* Client connects. */
 	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	assert(client_socket != (sock_t) -1);
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
 	{
+		/* Client starts receiving into buffer asynchronously. */
 		struct aiocb aiocb = {
 			.aio_fildes = client_socket,
 			.aio_buf = buffer,
@@ -125,11 +113,13 @@ int main()
 		struct aiocb *aiocb_done;
 		assert(aio_read(&aiocb) == 0);
 
+		/* Server accepts connection, sends GOODBYE and hangs up. */
 		server_socket = accept(listen_socket, NULL, NULL);
 		assert(server_socket != (sock_t) -1);
 		assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
 		closesocket(server_socket);
 
+		/* Client tries to send a query, and reads response. */
 		r = send(client_socket, SELECT, sizeof(SELECT), 0);
 		error = get_error(r);
 		printf("send -> %d, error = %d\n", r, error);
@@ -143,6 +133,45 @@ int main()
 
 #endif
 
+#ifdef _WIN32
+
+	printf("=== windows overlapped ===\n");
+
+	/* Client connects. */
+	client_socket = WSASocket(AF_UNIX, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	assert(client_socket != (sock_t) -1);
+	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
+
+	{
+		/* Client starts receiving into buffer asynchronously. */
+		WSA_OVERLAPPED overlapped = {.event = WSACreateEvent()};
+		WSABUF wbuffer {
+			.buf = buffer,
+			.len = sizeof(buffer)
+		};
+		DWORD flags;
+		DWORD transferred;
+		assert(WSARecv(client_socket, &wbuffer, 1, NULL, 0, &overlapped, NULL) == SOCKET_ERROR);
+		assert(WSAGetLastError() == WSA_IO_PENDING);
+
+		/* Server accepts connection, sends GOODBYE and hangs up. */
+		server_socket = accept(listen_socket, NULL, NULL);
+		assert(server_socket != (sock_t) -1);
+		assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
+		closesocket(server_socket);
+
+		/* Client tries to send a query, and reads response. */
+		r = send(client_socket, SELECT, sizeof(SELECT), 0);
+		error = get_error(r);
+		printf("send -> %d, error = %d\n", r, error);
+		assert(WSAGetOverlappedResult(client_socket, &overlapped, &transferred, TRUE, &flags));
+		error = WSAGetLastError();
+		printf("async recv -> \"%.*s\", error = %d\n", r > 0 ? r : 0, buffer, error);
+	}
+
+	closesocket(client_socket);
+
+#endif
 
 	closesocket(listen_socket);
     return 0;
