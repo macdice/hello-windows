@@ -1,106 +1,109 @@
-// modified https://social.msdn.microsoft.com/Forums/en-US/18769abd-fca0-4d3c-9884-1a38ce27ae90/wsapoll-and-nonblocking-connects-to-nonexistent-ports?forum=wsk
-
-
 #ifdef _WIN32
 #include <windows.h>
 #include <winsock2.h>
 typedef SOCKET sock_t;
-#define SOCKERR GetLastError()
-#define sockpoll WSAPoll
-#define SOCKCONNBLOCK WSAEWOULDBLOCK
-#define SOCKCONNREFUSED WSAECONNREFUSED
 #else
-#include <sys/ioctl.h>
-#include <sys/poll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <errno.h>
-#define sockpoll poll
-#define SOCKCONNBLOCK EINPROGRESS
-#define SOCKCONNREFUSED ECONNREFUSED
-#define SOCKERR errno
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 typedef int sock_t;
+#define closesocket close
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 
-#define ASSERT(x) \
-    do \
-    {    \
-        if (!(x))    \
-        {    \
-            printf("ASSERT(%s) failed\n", #x);    \
-            exit(1);    \
-        }    \
-    } while (0)
+#define SOCKET_PATH "/tmp/foo"
+#define HELLO "HELLO\n"
+#define GOODBYE "FATAL: flux capacitor failed\n"
+#define SELECT "SELECT 1 + 1\n"
 
-void printFlag(char* name, short value, int flag)
+static int
+get_error(int r)
 {
-    printf("%s =\t%#010x\n", name, value & flag);
-}
-
-void printAllFlags(const char* header, short revents)
-{
-    printf(header);
-    printFlag("POLLRDNORM", revents, POLLRDNORM);
-    printFlag("POLLRDBAND", revents, POLLRDBAND);
-    printFlag("POLLIN", revents, POLLIN);
-    printFlag("POLLPRI", revents, POLLPRI);
-    printFlag("POLLWRNORM", revents, POLLRDNORM);
-    printFlag("POLLOUT", revents, POLLOUT);
-    printFlag("POLLWRBAND", revents, POLLWRBAND);
-    printFlag("POLLERR", revents, POLLERR);
-    printFlag("POLLHUP", revents, POLLHUP);
-    printFlag("POLLNVAL", revents, POLLNVAL);
+#ifdef _WIN32
+	return r < 0 ? WSAGetLastError() : 0;
+#else
+	return r < 0 ? errno : 0;
+#endif
 }
 
 int main()
 {
+	const unsigned long one = 1;
+    struct sockaddr_un sa = {
+		.sun_family = AF_UNIX,
+		.sun_path = SOCKET_PATH
+	};
+	char buffer[1024];
+	sock_t listen_socket;
+	sock_t server_socket;
+	sock_t client_socket;
+	int error;
+	int r;
+
 #ifdef _WIN32
     WSADATA wsaData;
-    ASSERT(WSAStartup(0x202, &wsaData) == 0);
+    assert(WSAStartup(0x202, &wsaData) == 0);
+#else
+	signal(SIGPIPE, SIG_IGN);
 #endif
 
-    sock_t sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    ASSERT(sock != (sock_t)-1);
+#if 0
+	memset(&sa, 0, sizeof(sa));
+	sa.sun_family = AF_UNIX;
+	strncpy(sa.sun_path, sizeof(sa.sun_path) - 1, SOCKET_PATH);
+#endif
+
+	unlink(sa.sun_path);
+
+    listen_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    assert(listen_socket != (sock_t) -1);
+	assert(bind(listen_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
+	assert(listen(listen_socket, 5) == 0);
+
+
+	/*=================================================================
+	 * Traditional BSD sockets
+	 *=================================================================*/
 
 #ifdef _WIN32
-    ULONG on = 1;
-    ASSERT(ioctlsocket(sock, FIONBIO, &on) != -1);
+	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+	assert(client_socket != (sock_t) -1);
+	assert(ioctlsocket(client_socket, FIONBIO, &one) == 0);
 #else
-    int on = 1;
-    ASSERT(ioctl(sock, FIONBIO, &on) != -1);
+	client_socket = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	assert(client_socket != (sock_t) -1);
 #endif
 
-    sockaddr_in sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(0xFEFE);
-    sa.sin_addr.s_addr = htonl(0x7F000001);
+	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
-    int ret = connect(sock, (sockaddr*)&sa, sizeof(sa));
-    ASSERT(ret == 0 || SOCKERR == SOCKCONNBLOCK ||
-        SOCKERR == SOCKCONNREFUSED);
-    if (ret != 0 && SOCKERR == SOCKCONNBLOCK)
-    {
-        printf("Waiting for connect to succeed or fail...\n");
-        pollfd fds;
-        memset(&fds, 0, sizeof(fds));
-        fds.fd = sock;
-        /* Setting these flags will fail immediately: POLLPRI POLLWRBAND POLLERR POLLHUP POLLNVAL */
-        //fds.events = POLLRDNORM | POLLRDBAND | POLLIN /*| POLLPRI*/ | POLLWRNORM | POLLOUT /*| POLLWRBAND*/ /*| POLLERR*/ /*| POLLHUP*/ /*| POLLNVAL*/;
-        fds.events = POLLIN | POLLOUT;
-        printAllFlags("\nFlags set:\n", fds.events);
-        fds.revents = -1;
-        ret = sockpoll(&fds, 1, -1);
-        printf("\npoll returned: %d\nflags=%x\n", ret, fds.revents);
-        printAllFlags("\nFlags received:\n", fds.revents);
-        if (ret == -1)
-            printf("ERROR: %d\n", SOCKERR);
-    }
+	server_socket = accept(listen_socket, NULL, NULL);
+	assert(server_socket != (sock_t) -1);
 
+	assert(send(server_socket, HELLO, sizeof(HELLO), 0) == sizeof(HELLO));
+
+	assert(recv(client_socket, buffer, sizeof(buffer), 0) == sizeof(HELLO));
+	assert(strcmp(buffer, HELLO) == 0);
+
+	assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
+	closesocket(server_socket);
+
+	r = send(client_socket, SELECT, sizeof(SELECT), 0);
+	error = get_error(r);
+	printf("send after server closed -> %d, %d\n", r, error);
+	r = recv(client_socket, buffer, sizeof(buffer), 0);
+	error = get_error(r);
+	printf("recv after server closed -> %d, %d\n", r, error);
+
+	closesocket(client_socket);
+
+
+	closesocket(listen_socket);
     return 0;
 }
