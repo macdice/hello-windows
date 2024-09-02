@@ -1,6 +1,6 @@
 #ifdef _WIN32
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 typedef SOCKET sock_t;
 #else
 #include <errno.h>
@@ -72,20 +72,12 @@ int main()
 	 * Traditional BSD sockets
 	 *=================================================================*/
 
-#ifdef _WIN32
 	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	assert(client_socket != (sock_t) -1);
-	assert(ioctlsocket(client_socket, FIONBIO, &one) == 0);
-#else
-	client_socket = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
-	assert(client_socket != (sock_t) -1);
-#endif
-
 	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
 
 	server_socket = accept(listen_socket, NULL, NULL);
 	assert(server_socket != (sock_t) -1);
-
 	assert(send(server_socket, HELLO, sizeof(HELLO), 0) == sizeof(HELLO));
 
 	assert(recv(client_socket, buffer, sizeof(buffer), 0) == sizeof(HELLO));
@@ -102,6 +94,38 @@ int main()
 	printf("recv after server closed -> %d, %d\n", r, error);
 
 	closesocket(client_socket);
+
+#ifdef __FreeBSD__x
+
+	/*=================================================================
+	 * POSIX API.  Doesn't actually work on many systems, but at least
+	 * FreeBSD can do it, and maybe the proprietary Unixen.
+	 *=================================================================*/
+
+	client_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+	assert(client_socket != (sock_t) -1);
+	assert(connect(client_socket, (struct sockaddr *) &sa, sizeof(sa)) == 0);
+
+	server_socket = accept(listen_socket, NULL, NULL);
+	assert(server_socket != (sock_t) -1);
+	assert(send(server_socket, HELLO, sizeof(HELLO), 0) == sizeof(HELLO));
+
+	assert(recv(client_socket, buffer, sizeof(buffer), 0) == sizeof(HELLO));
+	assert(strcmp(buffer, HELLO) == 0);
+
+	assert(send(server_socket, GOODBYE, sizeof(GOODBYE), 0) == sizeof(GOODBYE));
+	closesocket(server_socket);
+
+	r = send(client_socket, SELECT, sizeof(SELECT), 0);
+	error = get_error(r);
+	printf("send after server closed -> %d, %d\n", r, error);
+	r = recv(client_socket, buffer, sizeof(buffer), 0);
+	error = get_error(r);
+	printf("recv after server closed -> %d, %d\n", r, error);
+
+	closesocket(client_socket);
+
+#endif
 
 
 	closesocket(listen_socket);
