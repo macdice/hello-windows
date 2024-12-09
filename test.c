@@ -171,12 +171,12 @@ parent(void)
 		"1252",
 		NULL
 	};
+
+	/* Try all combinations. */
 	for (const char **function = functions; *function; function++)
 		for (const char **locale = locales; *locale; locale++)
 			for (const char **encoding = encodings; *encoding; encoding++)
 				file_system_function_test(*locale, *function, *encoding);
-
-	/* -> no effect, char paths are always interpreted as ACP */
 }
 
 static void
