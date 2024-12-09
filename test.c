@@ -68,9 +68,9 @@ file_system_function_test(const char *locale, const char *function, const char *
 		{
 			printf("yes\n");
 			close(fd);
+		} else {
+			printf("no, errno = %d (%s)\n", errno, strerror(errno));
 		}
-		else
-			printf("no\n");
 	} else if (strcmp(function, "CreateFile") == 0) {
 		handle = CreateFile(filename,
 							GENERIC_WRITE | GENERIC_READ, 0, NULL, OPEN_EXISTING,
@@ -79,27 +79,27 @@ file_system_function_test(const char *locale, const char *function, const char *
 			printf("yes\n");
 			CloseHandle(handle);
 		} else {
-			printf("no\n");
+			printf("no, GetLastError() = %u\n", GetLastError());
 		}
 	} else if (strcmp(function, "_unlink") == 0) {
 		if (_unlink(filename) == 0)
 			printf("yes\n");
 		else
-			printf("no\n");
+			printf("no, errno = %d (%s)\n", errno, strerror(errno));
 	} else if (strcmp(function, "rename") == 0) {
 		if (rename(filename, "other") == 0)
 			printf("yes\n");
 		else
-			printf("no\n");
+			printf("no, errno = %d (%s)\n", errno, strerror(errno));
 	} else if (strcmp(function, "_mkdir") == 0) {
 		if (_mkdir(filename) == -1) {
 			if (errno == EEXIST)
 				printf("yes\n");
 			else
-				printf("no, unexpected errno = %d (%s)\n", errno, strerror(errno));
+				printf("no, errno = %d (%s)\n", errno, strerror(errno));
 		} else {
 			_rmdir(filename);
-			printf("no\n");
+			printf("no (succeeded unexpectedly)\n");
 		}
 	} else {
 		printf("unknown function: %s\n", function);
