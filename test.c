@@ -24,11 +24,11 @@ main(int argc, char *argv[])
 		for (int i = 0; i < sizeof(codepoints) / sizeof(wchar_t); ++i)
 		{
 			wchar_t command[128];
-			snwprintf(command,
-					  sizeof(command) / sizeof(wchar_t),
-					  L"test.exe hello%cworld from codepoint %04x",
-					  codepoints[i],
-					  codepoints[i]);
+			_snwprintf(command,
+					   sizeof(command) / sizeof(wchar_t),
+					   L"test.exe hello%cworld from codepoint %04x",
+					   codepoints[i],
+					   codepoints[i]);
 			_wsystem(command);
 		}
 	}
