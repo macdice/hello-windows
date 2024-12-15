@@ -1,8 +1,9 @@
-#include <shellapi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
+
 #include <windows.h>
+#include <shellapi.h>
 
 int
 main(int argc, char *argv[])
