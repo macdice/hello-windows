@@ -25,7 +25,7 @@ main(int argc, char *argv[])
 		{
 			wchar_t command[128];
 			snwprintf(command,
-					  sizeof(buffer) / sizeof(wchar_t),
+					  sizeof(command) / sizeof(wchar_t),
 					  L"test.exe hello%cworld from codepoint %04x",
 					  codepoints[i],
 					  codepoints[i]);
