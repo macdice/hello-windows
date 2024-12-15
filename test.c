@@ -5,6 +5,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#pragma comment(lib, "shell32.lib")
+
 int
 main(int argc, char *argv[])
 {
