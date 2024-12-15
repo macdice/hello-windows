@@ -7,14 +7,14 @@
 
 #pragma comment(lib, "shell32.lib")
 
-#define PUNCTUATION_SPACE "\x2008"
+#define PUNCTUATION_SPACE L"\x2008"
 
 int
 main(int argc, char *argv[])
 {
 	if (argc < 2)
 	{
-		_wsystem(L"test.exe --child hello" PUNCTUATION_SPACE "world");
+		_wsystem(L"test.exe hello" PUNCTUATION_SPACE "world");
 	}
 	else
 	{
