@@ -22,7 +22,15 @@ main(int argc, char *argv[])
 			0x3000
 		};
 		for (int i = 0; i < sizeof(codepoints) / sizeof(wchar_t); ++i)
-			_wsystem(L"test.exe hello%cworld", codepoints[i]);
+		{
+			wchar_t command[128];
+			snwprintf(command,
+					  sizeof(buffer) / sizeof(wchar_t),
+					  L"test.exe hello%cworld from codepoint %04x",
+					  codepoints[i],
+					  codepoints[i]);
+			_wsystem(command);
+		}
 	}
 	else
 	{
