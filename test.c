@@ -15,6 +15,7 @@ main(int argc, char *argv[])
 	};
 
 	printf("starting\n");
+#if 0
 	for (int i = 0; i < sizeof(codepoints) / sizeof(wchar_t); ++i)
 	{
 		wchar_t command[128];
@@ -26,15 +27,14 @@ main(int argc, char *argv[])
 				   codepoints[i]);
 		_wsystem(command);
 
-#if 0
 		_snwprintf(command,
 				   sizeof(command) / sizeof(wchar_t),
 				   L"test-a-client.exe hello%cworld from codepoint %04x",
 				   codepoints[i],
 				   codepoints[i]);
 		_wsystem(command);
-#endif
 	}
+#endif
 
     return 0;
 }
