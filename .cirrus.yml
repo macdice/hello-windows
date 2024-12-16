@@ -7,4 +7,6 @@ windows_task:
     - vcvarsall x86
     - cd C:/Users/ContainerAdministrator/AppData/Local/Temp/cirrus-ci-build
     - cl /EHsc test.c
+    - cl /EHsc test-w-client.c
+    - cl /EHsc test-a-client.c
     - test.exe
