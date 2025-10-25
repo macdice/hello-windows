@@ -2,6 +2,7 @@
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <uchar.h>
 
 const char *or_null(const char *s)
 {
